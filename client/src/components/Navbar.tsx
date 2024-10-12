@@ -10,7 +10,7 @@ const Navbar = () => {
   const [isActive, setIsActive] = useState("dashboard");
   const [toggleDrawer, setToggleDrawer] = useState(false);
 
-  const address = "0xabcd";
+  const address = "0xabcd"; //TODO: Change later
 
   return (
     <div className="flex md:flex-row flex-col-reverse justify-between mb-[35px] gap-6">
@@ -37,7 +37,7 @@ const Navbar = () => {
           styles={address ? "bg-[#1dc071]" : "bg-[#8c6dfd]"}
           handleClick={() => {
             if (address) navigate("create-campaign");
-            else alert("Please connect your wallet");
+            else alert("Please connect your wallet"); // TODO: Change this
           }}
         />
 
@@ -112,7 +112,7 @@ const Navbar = () => {
               styles={address ? "bg-[#1dc071]" : "bg-[#8c6dfd]"}
               handleClick={() => {
                 if (address) navigate("create-campaign");
-                else alert("Please connect your wallet");
+                else alert("Please connect your wallet"); // TODO: Change this
               }}
             />
           </div>
