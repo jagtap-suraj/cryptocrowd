@@ -54,9 +54,10 @@ export default function DashboardPage() {
     );
   }
 
-  const myCampaigns: Campaign[] = allCampaigns?.filter(
-    (c) => c.owner.toLowerCase() === walletAddress.toLowerCase()
-  ) || [];
+  const myCampaigns: Campaign[] =
+    allCampaigns?.filter(
+      (c) => c.owner.toLowerCase() === walletAddress.toLowerCase()
+    ) || [];
 
   return (
     <div className="container py-8">

@@ -9,7 +9,7 @@ interface CampaignGridProps {
 }
 
 export function CampaignGrid({ limit }: CampaignGridProps) {
-  const { data: campaigns, isLoading } = useFactory(); 
+  const { data: campaigns, isLoading } = useFactory();
 
   // Number of skeleton placeholders to show while loading
   const skeletonCount = limit || 3;
@@ -30,7 +30,10 @@ export function CampaignGrid({ limit }: CampaignGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {displayedCampaigns?.map((campaign) => (
-        <div key={campaign.campaignAddress} className="transition-transform duration-200">
+        <div
+          key={campaign.campaignAddress}
+          className="transition-transform duration-200"
+        >
           <CampaignCard
             campaignAddress={campaign.campaignAddress}
             name={campaign.name}

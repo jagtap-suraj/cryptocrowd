@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 export function FeatureCards() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   const features = [
     {
       title: "Decentralized Funding",
@@ -60,15 +60,15 @@ export function FeatureCards() {
 
     const scroll = () => {
       if (!scrollContainer) return;
-      
+
       scrollPosition += scrollSpeed;
-      
+
       // Reset position when we've scrolled the width of the first 4 items
       const itemWidth = scrollContainer.scrollWidth / features.length;
       if (scrollPosition >= itemWidth * 4) {
         scrollPosition = 0;
       }
-      
+
       scrollContainer.scrollLeft = scrollPosition;
       animationFrameId = requestAnimationFrame(scroll);
     };
@@ -78,17 +78,19 @@ export function FeatureCards() {
 
     // Pause scrolling when hovering
     const handleMouseEnter = () => cancelAnimationFrame(animationFrameId);
-    const handleMouseLeave = () => { animationFrameId = requestAnimationFrame(scroll); };
+    const handleMouseLeave = () => {
+      animationFrameId = requestAnimationFrame(scroll);
+    };
 
-    scrollContainer.addEventListener('mouseenter', handleMouseEnter);
-    scrollContainer.addEventListener('mouseleave', handleMouseLeave);
+    scrollContainer.addEventListener("mouseenter", handleMouseEnter);
+    scrollContainer.addEventListener("mouseleave", handleMouseLeave);
 
     // Clean up
     return () => {
       cancelAnimationFrame(animationFrameId);
       if (scrollContainer) {
-        scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
-        scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+        scrollContainer.removeEventListener("mouseenter", handleMouseEnter);
+        scrollContainer.removeEventListener("mouseleave", handleMouseLeave);
       }
     };
   }, [features.length]);
@@ -98,12 +100,12 @@ export function FeatureCards() {
       {/* Gradient fade effect on the edges */}
       <div className="absolute left-0 top-0 h-full w-12 z-10 bg-gradient-to-r from-background to-transparent"></div>
       <div className="absolute right-0 top-0 h-full w-12 z-10 bg-gradient-to-l from-background to-transparent"></div>
-      
+
       {/* Scrolling container */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex overflow-x-auto scrollbar-none py-4"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         <div className="flex gap-6 flex-nowrap">
           {features.map((feature, index) => (

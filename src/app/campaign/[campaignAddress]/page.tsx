@@ -69,7 +69,10 @@ export default function CampaignPage() {
     if (!campaign.imageHash) return "/placeholder-image.jpg";
     if (campaign.imageHash.startsWith("http")) return campaign.imageHash;
     if (campaign.imageHash.startsWith("ipfs://")) {
-      return `https://ipfs.io/ipfs/${campaign.imageHash.replace("ipfs://", "")}`;
+      return `https://ipfs.io/ipfs/${campaign.imageHash.replace(
+        "ipfs://",
+        ""
+      )}`;
     }
     return `https://ipfs.io/ipfs/${campaign.imageHash}`;
   };
