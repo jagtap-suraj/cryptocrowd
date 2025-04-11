@@ -23,9 +23,7 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           <main className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              {children}
-            </div>
+            {children}
           </main>
           <Toaster position="top-center" />
         </Providers>

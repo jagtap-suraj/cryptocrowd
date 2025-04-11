@@ -2,9 +2,10 @@
 
 import { useReadContract } from "thirdweb/react";
 import { getContract } from "thirdweb/contract";
-import { baseSepolia } from "thirdweb/chains";
 import { client } from "@/lib/client";
 import { useEffect, useState } from "react";
+import { useActiveAccount } from "thirdweb/react";
+import { useNetwork } from "@/lib/NetworkContext";
 
 interface CampaignDetails {
   name: string;
@@ -15,64 +16,72 @@ interface CampaignDetails {
   balance: bigint;
   state: number; // 0=Active, 1=Successful, 2=Failed
   owner: string;
-  paused: boolean;
-  tiers: {
-    name: string;
-    imageHash: string;
-    amount: bigint;
-    backers: bigint;
-    benefits: string;
-  }[];
+  isDisabled: boolean;
+  backerCount?: bigint;
 }
 
-export function useCampaign(campaignAddress: string) {
+// Separate hook for contribution - this avoids conditional hook calls
+function useContribution(
+  campaignAddress: string,
+  accountAddress: string | undefined
+) {
+  const { activeChain } = useNetwork();
+  
   const contract = getContract({
     client,
-    chain: baseSepolia,
+    chain: activeChain,
     address: campaignAddress,
   });
 
-  // Individual calls for each property
-  const { data: name } = useReadContract({
+  // Only get contribution if we have an account address
+  const [contribution, setContribution] = useState<bigint | undefined>(
+    undefined
+  );
+
+  // Always provide params, but conditionally enable the query
+  const { data: contributionData } = useReadContract({
     contract,
-    method: "function name() view returns (string)",
+    method: "function getBackerContribution(address) view returns (uint256)",
+    params: [
+      accountAddress || "0x0000000000000000000000000000000000000000",
+    ] as const,
+    queryOptions: { enabled: !!accountAddress },
   });
-  const { data: description } = useReadContract({
-    contract,
-    method: "function description() view returns (string)",
+
+  useEffect(() => {
+    // Only set contribution data if we have a real account
+    if (accountAddress && contributionData) {
+      setContribution(contributionData);
+    }
+  }, [contributionData, accountAddress]);
+
+  return contribution;
+}
+
+export function useCampaign(campaignAddress: string) {
+  const { activeChain } = useNetwork();
+  
+  const contract = getContract({
+    client,
+    chain: activeChain,
+    address: campaignAddress,
   });
-  const { data: imageHash } = useReadContract({
+
+  // Get the current connected account
+  const account = useActiveAccount();
+
+  // Use getCampaignDetails function instead of multiple calls
+  const { data: campaignDetailsData } =
+    useReadContract({
+      contract,
+      method:
+        "function getCampaignDetails() view returns ((address,string,string,string,uint256,uint256,uint256,uint8,address,bool))",
+    });
+
+  // Fetch backer count separately
+  const { data: backerCountData } = useReadContract({
     contract,
-    method: "function imageHash() view returns (string)",
-  });
-  const { data: goal } = useReadContract({
-    contract,
-    method: "function goal() view returns (uint256)",
-  });
-  const { data: deadline } = useReadContract({
-    contract,
-    method: "function deadline() view returns (uint256)",
-  });
-  const { data: balance } = useReadContract({
-    contract,
-    method: "function getContractBalance() view returns (uint256)",
-  });
-  const { data: state } = useReadContract({
-    contract,
-    method: "function state() view returns (uint8)",
-  });
-  const { data: owner } = useReadContract({
-    contract,
-    method: "function owner() view returns (address)",
-  });
-  const { data: paused } = useReadContract({
-    contract,
-    method: "function paused() view returns (bool)",
-  });
-  const { data: tiers } = useReadContract({
-    contract,
-    method:
-      "function getTiers() view returns ((string,string,uint256,uint256,string)[])",
+    method: "function backerCount() view returns (uint256)",
   });
 
   // Combine all data when all calls are complete
@@ -81,51 +90,30 @@ export function useCampaign(campaignAddress: string) {
   );
   const [isLoading, setIsLoading] = useState(true);
 
+  // Get user contribution using the separate hook
+  const userContribution = useContribution(campaignAddress, account?.address);
+
   useEffect(() => {
-    if (
-      name &&
-      description &&
-      imageHash &&
-      goal !== undefined &&
-      deadline !== undefined &&
-      balance !== undefined &&
-      state !== undefined &&
-      owner &&
-      paused !== undefined &&
-      tiers
-    ) {
+    if (campaignDetailsData) {
       setCampaignData({
-        name,
-        description,
-        imageHash,
-        goal,
-        deadline,
-        balance,
-        state,
-        owner,
-        paused,
-        tiers: tiers.map((tier) => ({
-          name: tier[0],
-          imageHash: tier[1],
-          amount: tier[2],
-          backers: tier[3],
-          benefits: tier[4],
-        })),
+        name: campaignDetailsData[1],
+        description: campaignDetailsData[2],
+        imageHash: campaignDetailsData[3],
+        goal: campaignDetailsData[4],
+        deadline: campaignDetailsData[5],
+        balance: campaignDetailsData[6],
+        state: campaignDetailsData[7],
+        owner: campaignDetailsData[8],
+        isDisabled: campaignDetailsData[9],
+        backerCount: backerCountData,
       });
       setIsLoading(false);
     }
-  }, [
-    name,
-    description,
-    imageHash,
-    goal,
-    deadline,
-    balance,
-    state,
-    owner,
-    paused,
-    tiers,
-  ]);
+  }, [campaignDetailsData, backerCountData]);
 
-  return { data: campaignData, isLoading };
+  return {
+    data: campaignData,
+    isLoading,
+    userContribution,
+  };
 }

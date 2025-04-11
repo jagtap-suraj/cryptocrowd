@@ -8,13 +8,13 @@ export function FeatureCards() {
   const features = [
     {
       title: "Decentralized Funding",
-      description: "No intermediaries taking cuts from your hard-earned funds",
+      description: "Direct peer-to-peer funding with no intermediaries",
       icon: "💸",
     },
     {
-      title: "NFT Rewards",
-      description: "Backers receive unique NFTs as tokens of appreciation",
-      icon: "🖼️",
+      title: "Smart Contract Security",
+      description: "Campaigns powered by secure, auditable smart contracts",
+      icon: "🔒",
     },
     {
       title: "Transparent Process",
@@ -22,20 +22,20 @@ export function FeatureCards() {
       icon: "🔍",
     },
     {
-      title: "Community Driven",
-      description: "Let the crowd decide which projects deserve funding",
-      icon: "👥",
+      title: "Deadline Management",
+      description: "Time-bound campaigns with automatic state management",
+      icon: "⏱️",
     },
     // Duplicate items to create a seamless infinite scroll effect
     {
       title: "Decentralized Funding",
-      description: "No intermediaries taking cuts from your hard-earned funds",
+      description: "Direct peer-to-peer funding with no intermediaries",
       icon: "💸",
     },
     {
-      title: "NFT Rewards",
-      description: "Backers receive unique NFTs as tokens of appreciation",
-      icon: "🖼️",
+      title: "Smart Contract Security",
+      description: "Campaigns powered by secure, auditable smart contracts",
+      icon: "🔒",
     },
     {
       title: "Transparent Process",
@@ -43,9 +43,9 @@ export function FeatureCards() {
       icon: "🔍",
     },
     {
-      title: "Community Driven",
-      description: "Let the crowd decide which projects deserve funding",
-      icon: "👥",
+      title: "Deadline Management",
+      description: "Time-bound campaigns with automatic state management",
+      icon: "⏱️",
     },
   ];
 
@@ -81,9 +81,17 @@ export function FeatureCards() {
     const handleMouseLeave = () => {
       animationFrameId = requestAnimationFrame(scroll);
     };
+    
+    // Also pause on touch for mobile devices
+    const handleTouchStart = () => cancelAnimationFrame(animationFrameId);
+    const handleTouchEnd = () => {
+      animationFrameId = requestAnimationFrame(scroll);
+    };
 
     scrollContainer.addEventListener("mouseenter", handleMouseEnter);
     scrollContainer.addEventListener("mouseleave", handleMouseLeave);
+    scrollContainer.addEventListener("touchstart", handleTouchStart);
+    scrollContainer.addEventListener("touchend", handleTouchEnd);
 
     // Clean up
     return () => {
@@ -91,6 +99,8 @@ export function FeatureCards() {
       if (scrollContainer) {
         scrollContainer.removeEventListener("mouseenter", handleMouseEnter);
         scrollContainer.removeEventListener("mouseleave", handleMouseLeave);
+        scrollContainer.removeEventListener("touchstart", handleTouchStart);
+        scrollContainer.removeEventListener("touchend", handleTouchEnd);
       }
     };
   }, [features.length]);
@@ -98,22 +108,22 @@ export function FeatureCards() {
   return (
     <div className="relative overflow-hidden">
       {/* Gradient fade effect on the edges */}
-      <div className="absolute left-0 top-0 h-full w-12 z-10 bg-gradient-to-r from-background to-transparent"></div>
-      <div className="absolute right-0 top-0 h-full w-12 z-10 bg-gradient-to-l from-background to-transparent"></div>
+      <div className="absolute left-0 top-0 h-full w-16 md:w-24 z-10 bg-gradient-to-r from-background to-transparent"></div>
+      <div className="absolute right-0 top-0 h-full w-16 md:w-24 z-10 bg-gradient-to-l from-background to-transparent"></div>
 
       {/* Scrolling container */}
       <div
         ref={scrollRef}
-        className="flex overflow-x-auto scrollbar-none py-4"
+        className="flex overflow-x-auto scrollbar-none py-6"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        <div className="flex gap-6 flex-nowrap">
+        <div className="flex gap-6 flex-nowrap px-4">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-card p-6 rounded-lg border hover:shadow-md transition-all hover:-translate-y-1 min-w-[280px] flex-shrink-0"
+              className="bg-card p-6 rounded-xl border shadow-sm hover:shadow-md transition-all hover:-translate-y-1 hover:border-primary/20 min-w-[280px] md:min-w-[320px] flex-shrink-0"
             >
-              <div className="text-3xl mb-4">{feature.icon}</div>
+              <div className="text-4xl mb-4 bg-primary/10 w-12 h-12 flex items-center justify-center rounded-lg">{feature.icon}</div>
               <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
               <p className="text-muted-foreground">{feature.description}</p>
             </div>

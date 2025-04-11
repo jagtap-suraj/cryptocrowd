@@ -17,12 +17,14 @@ import { Button } from "@/components/ui/button";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { prepareContractCall } from "thirdweb";
 import { getContract } from "thirdweb/contract";
-import { baseSepolia } from "thirdweb/chains";
 import { client } from "@/lib/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "thirdweb/storage";
 import { toast } from "sonner";
+import Link from "next/link";
+import { ArrowRightLeft } from "lucide-react";
+import { useNetwork } from "@/lib/NetworkContext";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -30,7 +32,7 @@ const formSchema = z.object({
   image: z
     .instanceof(File)
     .refine((file) => file.size <= 5_000_000, "Max 5MB size"),
-  goal: z.coerce.number().min(0.1, "Goal must be at least 0.1 ETH"),
+  goal: z.coerce.number().min(0.0001, "Goal must be at least 0.0001 POL"),
   duration: z.coerce.number().min(1, "Duration must be at least 1 day"),
 });
 
@@ -38,6 +40,7 @@ export function CreateCampaignForm() {
   const account = useActiveAccount();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { factoryAddress, activeChain, currencySymbol } = useNetwork();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,7 +52,14 @@ export function CreateCampaignForm() {
     },
   });
 
-  const { mutate: createCampaign } = useSendTransaction();
+  const { mutate: createCampaign } = useSendTransaction({
+    payModal: {
+      buyWithFiat: {
+        preferredProvider: "TRANSAK",
+        testMode: true,
+      },
+    },
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!account) {
@@ -68,8 +78,8 @@ export function CreateCampaignForm() {
 
       const contract = getContract({
         client,
-        chain: baseSepolia,
-        address: process.env.NEXT_PUBLIC_CROWDFUNDING_FACTORY!,
+        chain: activeChain,
+        address: factoryAddress,
       });
 
       createCampaign(
@@ -154,16 +164,42 @@ export function CreateCampaignForm() {
         <FormField
           control={form.control}
           name="image"
-          render={({ field: { onChange, ...fieldProps } }) => (
+          render={({ field: { onChange, value, ...fieldProps } }) => (
             <FormItem>
               <FormLabel>Campaign Image</FormLabel>
               <FormControl>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => onChange(e.target.files?.[0])}
-                  {...{ ...fieldProps, value: undefined }}
-                />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        document
+                          .getElementById("campaign-image-upload")
+                          ?.click()
+                      }
+                      className="cursor-pointer"
+                    >
+                      Choose Image
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {value instanceof File ? value.name : "No file chosen"}
+                    </span>
+                  </div>
+                  <Input
+                    id="campaign-image-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onChange(file);
+                      }
+                    }}
+                    {...{ ...fieldProps, value: undefined }}
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -176,10 +212,14 @@ export function CreateCampaignForm() {
             name="goal"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Funding Goal (ETH)</FormLabel>
+                <FormLabel>Funding Goal ({currencySymbol})</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.1" {...field} />
                 </FormControl>
+                <Link href="/currency-converter" className="text-xs text-muted-foreground hover:underline inline-flex items-center gap-1">
+                  <span>Check currency conversion rates</span>
+                  <ArrowRightLeft className="h-3 w-3" />
+                </Link>
                 <FormMessage />
               </FormItem>
             )}

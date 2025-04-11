@@ -5,22 +5,33 @@ import {Crowdfunding} from "./Crowdfunding.sol";
 
 contract CrowdfundingFactory {
     address public owner;
-    bool public paused;
+    bool public isFactoryDisabled;
 
-    struct Campaign {
+    struct FactoryCampaign {
         address campaignAddress;
-        address owner;
         string name;
-        string imageHash; // IPFS hash for campaign image
+        string imageHash;
         uint256 creationTime;
     }
 
-    Campaign[] public campaigns;
-    mapping(address => Campaign[]) public userCampaigns;
+    FactoryCampaign[] public campaigns;
+    mapping(address => uint256) public campaignIndices; // Track indices for faster lookup
+    mapping(address => address[]) public userCampaignAddresses; // Just store addresses for user campaigns
 
+    uint256 public constant MAX_CAMPAIGNS_PER_USER = 100;
+
+    mapping(address => address[]) public backerCampaigns; // Tracks campaigns a backer has funded
+    mapping(address => bool) public isOurCampaign; // Track campaigns created by the factory
+
+    /// @notice Emitted when a new campaign is created.
+    /// @param campaignAddress The address of the new campaign.
+    /// @param owner The address of the campaign owner.
+    /// @param name The name of the campaign.
+    /// @param imageHash The IPFS hash of the campaign image.
+    /// @param timestamp The timestamp of the campaign creation.
     event CampaignCreated(
-        address indexed campaignAddress,
-        address indexed owner,
+        address campaignAddress,
+        address owner,
         string name,
         string imageHash,
         uint256 timestamp
@@ -31,8 +42,8 @@ contract CrowdfundingFactory {
         _;
     }
 
-    modifier notPaused() {
-        require(!paused, "Factory paused");
+    modifier notDisabled() {
+        require(!isFactoryDisabled, "Factory disabled");
         _;
     }
 
@@ -46,26 +57,39 @@ contract CrowdfundingFactory {
         string memory _imageHash,
         uint256 _goal,
         uint256 _durationInDays
-    ) external notPaused {
+    ) external notDisabled {
+        require(_durationInDays > 0, "Duration must be > 0");
+        require(_goal > 0, "Goal must be > 0");
+        require(userCampaignAddresses[msg.sender].length < MAX_CAMPAIGNS_PER_USER, "Max campaigns reached");
+        
         Crowdfunding newCampaign = new Crowdfunding(
             msg.sender,
             _name,
             _description,
             _imageHash,
             _goal,
-            _durationInDays
+            _durationInDays,
+            owner,
+            address(this) // Pass factory address to campaign
         );
 
-        Campaign memory campaign = Campaign({
+        FactoryCampaign memory campaign = FactoryCampaign({
             campaignAddress: address(newCampaign),
-            owner: msg.sender,
             name: _name,
             imageHash: _imageHash,
             creationTime: block.timestamp
         });
 
+        // Store the campaign index for faster lookups
+        uint256 newIndex = campaigns.length;
+        campaignIndices[address(newCampaign)] = newIndex;
         campaigns.push(campaign);
-        userCampaigns[msg.sender].push(campaign);
+        
+        // Only store addresses in userCampaignAddresses
+        userCampaignAddresses[msg.sender].push(address(newCampaign));
+
+        // Mark the campaign as created by the factory
+        isOurCampaign[address(newCampaign)] = true;
 
         emit CampaignCreated(
             address(newCampaign),
@@ -76,15 +100,72 @@ contract CrowdfundingFactory {
         );
     }
 
-    function getUserCampaigns(address _user) external view returns (Campaign[] memory) {
-        return userCampaigns[_user];
+    /// @notice Returns the addresses of all campaigns created by the specified user.
+    /// @param _user The address of the user.
+    /// @return An array of campaign addresses.
+    function getUserCampaignAddresses(address _user) external view returns (address[] memory) {
+        return userCampaignAddresses[_user];
     }
 
-    function getAllCampaigns() external view returns (Campaign[] memory) {
-        return campaigns;
+    function getAllCampaignAddresses() external view returns (address[] memory) {
+        address[] memory campaignAddresses = new address[](campaigns.length);
+
+        for (uint i = 0; i < campaigns.length; i++) {
+            campaignAddresses[i] = campaigns[i].campaignAddress;
+        }
+
+        return campaignAddresses;
     }
 
-    function togglePause() external onlyOwner {
-        paused = !paused;
+    function toggleFactoryDisabled() external onlyOwner {
+        isFactoryDisabled = !isFactoryDisabled;
+    }
+
+    // To be used in crowdfunding.sol
+    function trackBackerContribution(address _backer, address _campaign) external {
+        require(isOurCampaign[msg.sender], "Only our campaigns can call this");
+        require(_campaign == msg.sender, "Campaign can only track its own contributions");
+        
+        // Check if this campaign is already tracked for this backer
+        bool alreadyTracked = false;
+        address[] storage backedCampaigns = backerCampaigns[_backer];
+        
+        for (uint i = 0; i < backedCampaigns.length; i++) {
+            if (backedCampaigns[i] == _campaign) {
+                alreadyTracked = true;
+                break;
+            }
+        }
+        
+        // Only add if not already tracked
+        if (!alreadyTracked) {
+            backerCampaigns[_backer].push(_campaign);
+        }
+    }
+
+    function getBackerCampaignAddresses(address _backer) external view returns (address[] memory) {
+        return backerCampaigns[_backer];
+    }
+
+    /// @notice Returns the donations made by the caller.
+    /// @return An array of backer donations.
+    function getBackerDonations(address _backer) external view returns (Crowdfunding.BackerDonation[] memory) {
+        address[] memory backedCampaigns = backerCampaigns[_backer];
+        
+        Crowdfunding.BackerDonation[] memory donations = new Crowdfunding.BackerDonation[](backedCampaigns.length);
+
+        for (uint i = 0; i < backedCampaigns.length; i++) {
+            address campaignAddress = backedCampaigns[i];
+            uint256 donatedAmount = Crowdfunding(campaignAddress).getBackerContribution(_backer);
+            donations[i] = Crowdfunding.BackerDonation(campaignAddress, donatedAmount);
+        }
+
+        return donations;
+    }
+
+    // For testing
+    function toggleCampaignState(address _campaign, Crowdfunding.CampaignState _newState) external onlyOwner {
+        require(isOurCampaign[_campaign], "Invalid campaign");
+        Crowdfunding(_campaign).setCampaignState(_newState);
     }
 }
