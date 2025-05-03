@@ -71,15 +71,56 @@ export function CreateCampaignForm() {
 
     setIsLoading(true);
     try {
-      const imageUri = await upload({
-        client,
-        files: [values.image],
+      // Log the form values
+      console.log("Form values before upload:", {
+        name: values.name,
+        description: values.description,
+        image: {
+          name: values.image.name,
+          size: values.image.size,
+          type: values.image.type,
+          lastModified: values.image.lastModified
+        },
+        goal: values.goal,
+        duration: values.duration
       });
+
+      // Attempt to upload the image and log detailed information
+      console.log("Starting IPFS upload...");
+      let imageUri;
+      try {
+        imageUri = await upload({
+          client,
+          files: [values.image],
+        });
+        console.log("IPFS upload successful:", imageUri);
+      } catch (uploadError) {
+        console.error("IPFS upload error details:", uploadError);
+        // Log more details about the error
+        if (uploadError instanceof Error) {
+          console.error("Error message:", uploadError.message);
+          console.error("Error stack:", uploadError.stack);
+        }
+        // Check if client is properly initialized
+        console.log("Client configuration:", {
+          clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ? "Set" : "Not set",
+          secretKey: process.env.NEXT_PUBLIC_THIRDWEB_SECRET_KEY ? "Set" : "Not set"
+        });
+        throw uploadError; // Re-throw to be caught by outer catch block
+      }
 
       const contract = getContract({
         client,
         chain: activeChain,
         address: factoryAddress,
+      });
+
+      console.log("Preparing contract call with:", {
+        name: values.name,
+        description: values.description,
+        imageUri: imageUri,
+        goal: BigInt(values.goal * 10 ** 18).toString(),
+        duration: values.duration
       });
 
       createCampaign(
@@ -103,6 +144,7 @@ export function CreateCampaignForm() {
             router.push(`/dashboard/${account.address}`);
           },
           onError: (error) => {
+            console.error("Contract call error:", error);
             toast.error("Error", {
               description: error.message,
             });
@@ -110,7 +152,7 @@ export function CreateCampaignForm() {
         }
       );
     } catch (error) {
-      console.error(error);
+      console.error("Form submission error:", error);
       toast.error("Error", {
         description: "Failed to upload image",
       });

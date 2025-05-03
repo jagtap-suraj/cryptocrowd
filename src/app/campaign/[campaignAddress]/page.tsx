@@ -16,8 +16,9 @@ import { notFound, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getContract, prepareContractCall } from "thirdweb";
-import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+import { useActiveAccount, useSendTransaction, type Theme } from "thirdweb/react";
 import { formatEther } from "viem";
+import { useTheme } from "next-themes";
 
 // Add a simple cache for campaign data
 const campaignCache = new Map();
@@ -25,13 +26,22 @@ const campaignCache = new Map();
 export default function CampaignPage() {
   const params = useParams();
   const campaignAddress = params?.campaignAddress as string;
+  const { theme } = useTheme();
   const {
     data: campaign,
     isLoading,
     userContribution,
   } = useCampaign(campaignAddress);
   const account = useActiveAccount();
-  const { mutate: fund, isPending: isFunding } = useSendTransaction();
+  const { mutate: fund, isPending: isFunding } = useSendTransaction({
+    payModal: {
+      theme: theme as "light" | "dark" | Theme,
+      buyWithFiat: {
+        preferredProvider: "TRANSAK",
+        testMode: true,
+      },
+    },
+  });
   const [amount, setAmount] = useState("0.01");
   const [waitingForConfirmation, setWaitingForConfirmation] = useState(false);
   const { currencySymbol, activeChain, network } = useNetwork();

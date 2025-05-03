@@ -55,7 +55,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({
   children 
 }) => {
   // Initialize from localStorage if available, otherwise default to polygon
-  const [network, setNetworkState] = useState<NetworkType>("polygon");
+  const [network, setNetworkState] = useState<NetworkType>("baseSepolia");
 
   useEffect(() => {
     // Get saved network from localStorage

@@ -13,12 +13,14 @@ import { DollarSignIcon, InfoIcon, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTheme } from "next-themes";
 
 export const Navbar = () => {
   const account = useActiveAccount();
   const pathname = usePathname();
   const { activeChain } = useNetwork();
   const [isOpen, setIsOpen] = useState(false);
+  const { theme } = useTheme();
 
   // Helper function to determine nav item variants
   const getNavItemVariant = (path: string) => {
@@ -228,7 +230,7 @@ export const Navbar = () => {
                   size: "wide",
                   showThirdwebBranding: true,
                 }}
-                theme="dark"
+                theme={theme as "light" | "dark"}
                 chain={activeChain}
               />
             </div>
